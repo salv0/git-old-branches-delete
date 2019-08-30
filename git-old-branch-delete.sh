@@ -87,14 +87,14 @@ initialize() {
 }
 
 print_error_and_usage() {
-  print_red "$1\n" >&2
+  print_red "Error: $1\n" >&2
   print_cyn "Please specify -h for usage manual"
   exit 1
 }
 
 check_git_installed() {
   if ! [ -x "$(command -v git)" ]; then
-    print_error_and_usage 'Error: git is not installed.'
+    print_error_and_usage 'git is not installed.'
   fi
 }
 
@@ -104,7 +104,7 @@ check_valid_git_repo() {
   debug_message "Command: git -C $repo_dir rev-parse --is-inside-work-tree"
 
   if ! [ "$(git -C $repo_dir rev-parse --is-inside-work-tree 2>/dev/null)" == "true" ]; then
-    print_error_and_usage 'Error: The specified path is not a valid git repository.'
+    print_error_and_usage 'The specified path is not a valid git repository.'
   fi
 }
 
@@ -177,7 +177,7 @@ initialize_settings() {
       ;;
     -* | --*)
       local invalid_option=$1
-      print_error_and_usage "Error: invalid option $invalid_option"
+      print_error_and_usage "invalid option $invalid_option"
       ;;
     *)
       target_repo_dir=$1
@@ -195,16 +195,16 @@ initialize_settings() {
 check_valid_dir() {
   local repo_dir=$1
 
-  if [ ! -d "$repo_dir" ]; then
-    print_error_and_usage "Error: parameter <repo-dir> invalid or not specified."
+  if [[ ! -d "$repo_dir" ]]; then
+    print_error_and_usage "parameter <repo-dir> invalid or not specified."
   fi
 }
 
 check_valid_days() {
   local days=$1
 
-  if ! [ "$days" -gt "0" ] 2>/dev/null; then
-    print_error_and_usage "Error: number of days is invalid."
+  if ! [[ "$days" -gt "0" ]] 2>/dev/null; then
+    print_error_and_usage "number of days is invalid."
   fi
 }
 
