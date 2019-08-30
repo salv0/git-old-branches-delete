@@ -187,13 +187,24 @@ initialize_settings() {
   done
 
   check_valid_dir $target_repo_dir
-  # check_valid_days $check_valid_days
+  check_valid_days $days
+
   debug_message "Setting up the script with dry_run=$dry_run days=$days delete_merged_branches=$delete_merged_branches target_repo_dir=$target_repo_dir"
 }
 
 check_valid_dir() {
-  if [ ! -d "$1" ]; then
-    print_error_and_usage "Error: repo-dir invalid or not specified."
+  local repo_dir=$1
+
+  if [ ! -d "$repo_dir" ]; then
+    print_error_and_usage "Error: parameter <repo-dir> invalid or not specified."
+  fi
+}
+
+check_valid_days() {
+  local days=$1
+
+  if ! [ "$days" -gt "0" ]; then
+    print_error_and_usage "Error: number of days is invalid."
   fi
 }
 
