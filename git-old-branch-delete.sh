@@ -22,6 +22,11 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
+# Abort on nonzero exitstatus
+set -o errexit
+# Don't hide errors within pipes
+set -o pipefail
+
 #////////////////////////////////////////
 # COLORS & PRINT FUNCTIONS
 #////////////////////////////////////////
@@ -65,9 +70,14 @@ print_error_and_usage() {
   exit 1
 }
 
+print_action() {
+  local message=$1
+  print_blue "[ACTION] ${message}"
+}
+
 debug_message() {
   local message=$1
-  print_yel "[DEBUG] $1"
+  print_yel "[DEBUG] ${message}"
 }
 
 #////////////////////////////////////////
@@ -75,33 +85,46 @@ debug_message() {
 #////////////////////////////////////////
 
 old_git_branches_delete() {
-  # Prune local "cache" of remote branches first.
-  git fetch --prune origin
+  # Capture global variables
+  local dry_run=$dry_run
+  local target_git_repo_dir=$target_git_repo_dir
+  local delete_merged_branches=$delete_merged_branches
+  local execution_days=$execution_days
 
-  # Uncomment the following line (and comment the other) if you want to delete only merged branches
-  # branches=$(git branch -r --merged | grep -v master | grep -v developer | sed 's/origin\///')
-  branches=$(git branch -r --no-merged | grep -v master | grep -v developer | sed 's/origin\///')
+  print_action "Pruning local cache of remote branches first..."
+  git -C ${target_git_repo_dir} fetch --prune origin
 
+  print_action "Retrieving list of branches for deletion..."
+  local branches=
+  if [[ delete_merged_branches ]]; then
+    debug_message "Command: git -C ${target_git_repo_dir} branch -r --merged | grep -v master | grep -v developer | sed 's/origin\///'"
+    branches=$(git -C ${target_git_repo_dir} branch -r --merged | grep -v master | grep -v developer | sed 's/origin\///')
+  else
+    debug_message "Command: git -C ${target_git_repo_dir} branch -r --no-merged | grep -v master | grep -v developer | sed 's/origin\///'"
+    branches=$(git -C ${target_git_repo_dir} branch -r --no-merged | grep -v master | grep -v developer | sed 's/origin\///')
+  fi
+
+  print_action "Starting branches deletion.."
   for branch in $branches; do
     # Get the date in format 2016-09-23 14:40:54 +0200
-    branchDate=$(git show -s --format=%ci origin/${branch})
+    local branch_date=$(git -C ${target_git_repo_dir} show -s --format=%ci origin/${branch})
 
     # Extract only the date part (remove time and timezone)
-    branchDate=$(echo ${branchDate} | cut -d' ' -f 1)
+    branch_date=$(echo ${branch_date} | cut -d' ' -f 1)
 
-    currentTimestamp=$(date +%s)
+    local current_timestamp=$(date +%s)
 
-    branchDateTimestamp=$(date -j -f "%Y-%m-%d" "${branchDate}" "+%s")
+    local branch_date_timestamp=$(date -j -f "%Y-%m-%d" "${branch_date}" "+%s")
 
-    days=$((($currentTimestamp - $branchDateTimestamp) / 60 / 60 / 24))
+    local days_diff=$((($current_timestamp - $branch_date_timestamp) / 60 / 60 / 24))
 
-    if [[ "$days" -gt $THREE_MONTHS ]]; then
+    if [[ "$days_diff" -gt $THREE_MONTHS ]]; then
       print_green "Selected branch: $branch"
-      echo "    --- Full branch date: $branchDate"
-      echo "    --- Y-m-d date: $branchDate"
-      echo "    --- Current timestamp: $currentTimestamp"
-      echo "    --- Branch date timestamp: $branchDateTimestamp"
-      echo "    --- Last commit on $branch branch was ${cyn}$days${end} days ago"
+      echo "    --- Full branch date: $branch_date"
+      echo "    --- Y-m-d date: $branch_date"
+      echo "    --- Current timestamp: $current_timestamp"
+      echo "    --- Branch date timestamp: $branch_date_timestamp"
+      echo "    --- Last commit on $branch branch was ${cyn}$days_diff${end} days ago"
 
       print_red "    --- Deleting the old branch $branch"
 
@@ -111,26 +134,15 @@ old_git_branches_delete() {
       echo ""
     fi
   done
-  print_blue "Deleting old branches finished."
+  print_action "Deleting old branches finished."
 }
 
-initialize() {
-  initialize_colors
-  initialize_settings $ARGS
-}
-
-initialize_settings() {
-  # Default settings
-  local days=91 # 3 Months
-  local delete_merged_branches=1
-  local dry_run=1
-  target_repo_dir=
-
+initialize_settings_from_commandline() {
   while [ "$1" != "" ]; do
     case $1 in
-    -t | --time)
+    -d | --days)
       shift
-      days=$1
+      execution_days=$1
       ;;
     -m | --merged)
       delete_merged_branches=1
@@ -150,16 +162,22 @@ initialize_settings() {
       print_error_and_usage "invalid option ${invalid_option}"
       ;;
     *)
-      target_repo_dir=$1
+      target_git_repo_dir=$1
       ;;
     esac
     shift
   done
 
-  check_valid_dir $target_repo_dir
-  check_valid_days $days
+  check_valid_dir $target_git_repo_dir
+  check_valid_days $execution_days
 
-  debug_message "Setting up the script with dry_run=${dry_run} days=${days} delete_merged_branches=${delete_merged_branches} target_repo_dir=${target_repo_dir}"
+  # Lock-in script's execution values captured from the command line
+  readonly dry_run
+  readonly target_git_repo_dir
+  readonly delete_merged_branches
+  readonly execution_days
+
+  debug_message "Setting up the script with dry_run=${dry_run} days=${execution_days} delete_merged_branches=${delete_merged_branches} target_repo_dir=${target_git_repo_dir}"
 }
 
 check_git_installed() {
@@ -199,13 +217,13 @@ usage() {
     usage: ${PROGNAME} [options] <repo-dir>
 
     The script deletes merged (default) or non-merged branches older than
-    a specified time from the target git repository.
+    a specified time (in days) from the target git repository.
 
     The script will run automatically in dry-run mode.
     For a real execution specify --execute.
 
     OPTIONS:
-       -t --time                time in days [default 91]
+       -d --days                days [default 91]
        -m --merged              deletes merged branches [default]
        -n --no-merged           deletes non-merged branches
        -e --execute             run the script pushing changes to git
@@ -236,13 +254,23 @@ EOF
 }
 
 main() {
+  # Globals
   readonly PROGNAME=$(basename $0)
   readonly ARGS="$@"
+  readonly THREE_MONTHS=91
 
-  initialize
+  # Default values
+  local dry_run=1
+  local target_git_repo_dir=''
+  local delete_merged_branches=1
+  local execution_days=$THREE_MONTHS
+
+  initialize_colors
+  initialize_settings_from_commandline $ARGS
 
   check_git_installed
-  check_valid_git_repo $target_repo_dir
+  check_valid_git_repo $target_git_repo_dir
+
   old_git_branches_delete
 }
 
