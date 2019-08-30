@@ -203,7 +203,7 @@ check_valid_dir() {
 check_valid_days() {
   local days=$1
 
-  if ! [ "$days" -gt "0" ]; then
+  if ! [ "$days" -gt "0" ] 2>/dev/null; then
     print_error_and_usage "Error: number of days is invalid."
   fi
 }
