@@ -84,7 +84,7 @@ git_branches_delete() {
 
     days=$((($currentTimestamp - $branchDateTimestamp) / 60 / 60 / 24))
 
-    if [ "$days" -gt $THREE_MONTHS ]; then
+    if [[ "$days" -gt $THREE_MONTHS ]]; then
       print_green "Selected branch: $branch"
       echo "    --- Full branch date: $branchDate"
       echo "    --- Y-m-d date: $branchDate"
@@ -115,7 +115,7 @@ print_error_and_usage() {
 }
 
 check_git_installed() {
-  if ! [ -x "$(command -v git)" ]; then
+  if ! [[ -x "$(command -v git)" ]]; then
     print_error_and_usage 'git is not installed.'
   fi
 }
@@ -125,7 +125,7 @@ check_valid_git_repo() {
 
   debug_message "Command: git -C ${repo_dir} rev-parse --is-inside-work-tree"
 
-  if ! [ "$(git -C ${repo_dir} rev-parse --is-inside-work-tree 2>/dev/null)" == "true" ]; then
+  if ! [[ "$(git -C ${repo_dir} rev-parse --is-inside-work-tree 2>/dev/null)" == "true" ]]; then
     print_error_and_usage 'The specified path is not a valid git repository.'
   fi
 }
