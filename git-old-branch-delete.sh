@@ -59,11 +59,22 @@ print_cyn() {
   echo -e "${cyn}$1${end}"
 }
 
+print_error_and_usage() {
+  print_red "Error: $1\n" >&2
+  print_cyn "Please specify -h for usage manual"
+  exit 1
+}
+
+debug_message() {
+  local message=$1
+  print_yel "[DEBUG] $1"
+}
+
 #////////////////////////////////////////
 # SCRIPT FUNCTIONS
 #////////////////////////////////////////
 
-git_branches_delete() {
+old_git_branches_delete() {
   # Prune local "cache" of remote branches first.
   git fetch --prune origin
 
@@ -106,69 +117,6 @@ git_branches_delete() {
 initialize() {
   initialize_colors
   initialize_settings $ARGS
-}
-
-print_error_and_usage() {
-  print_red "Error: $1\n" >&2
-  print_cyn "Please specify -h for usage manual"
-  exit 1
-}
-
-check_git_installed() {
-  if ! [[ -x "$(command -v git)" ]]; then
-    print_error_and_usage 'git is not installed.'
-  fi
-}
-
-check_valid_git_repo() {
-  local repo_dir=$1
-
-  debug_message "Command: git -C ${repo_dir} rev-parse --is-inside-work-tree"
-
-  if ! [[ "$(git -C ${repo_dir} rev-parse --is-inside-work-tree 2>/dev/null)" == "true" ]]; then
-    print_error_and_usage 'The specified path is not a valid git repository.'
-  fi
-}
-
-usage() {
-  cat <<-EOF
-    usage: ${PROGNAME} [options] <repo-dir>
-
-    The script deletes merged (default) or non-merged branches older than
-    a specified time from the target git repository.
-
-    The script will run automatically in dry-run mode.
-    For a real execution specify --execute.
-
-    OPTIONS:
-       -t --time                time in days [default 91]
-       -m --merged              deletes merged branches [default]
-       -n --no-merged           deletes non-merged branches
-       -e --execute             run the script pushing changes to git
-       -h --help                show this help
-
-
-    Examples:
-       [Dry run] Deletes merged branches older than 3 months
-       ${PROGNAME} <repo-dir>
-
-       [Dry run] Deletes non-merged branches older than 3 months
-       ${PROGNAME} --no-merged <repo-dir>
-
-       [Dry run] Deletes merged branches older than 5 months
-       ${PROGNAME} -t 152 <repo-dir>
-
-       Deletes merged branches older than 3 months
-       ${PROGNAME} <repo-dir> --execute
-
-    Quick time values reference:
-      One year = 365
-      Eight months = 243
-      Five months = 152
-      Three months = 91
-      Two months = 60
-      One month = 30
-EOF
 }
 
 initialize_settings() {
@@ -214,6 +162,22 @@ initialize_settings() {
   debug_message "Setting up the script with dry_run=${dry_run} days=${days} delete_merged_branches=${delete_merged_branches} target_repo_dir=${target_repo_dir}"
 }
 
+check_git_installed() {
+  if ! [[ -x "$(command -v git)" ]]; then
+    print_error_and_usage 'git is not installed.'
+  fi
+}
+
+check_valid_git_repo() {
+  local repo_dir=$1
+
+  debug_message "Command: git -C ${repo_dir} rev-parse --is-inside-work-tree"
+
+  if ! [[ "$(git -C ${repo_dir} rev-parse --is-inside-work-tree 2>/dev/null)" == "true" ]]; then
+    print_error_and_usage 'The specified path is not a valid git repository.'
+  fi
+}
+
 check_valid_dir() {
   local repo_dir=$1
 
@@ -230,12 +194,47 @@ check_valid_days() {
   fi
 }
 
-debug_message() {
-  local message=$1
-  print_yel "[DEBUG] $1"
+usage() {
+  cat <<-EOF
+    usage: ${PROGNAME} [options] <repo-dir>
+
+    The script deletes merged (default) or non-merged branches older than
+    a specified time from the target git repository.
+
+    The script will run automatically in dry-run mode.
+    For a real execution specify --execute.
+
+    OPTIONS:
+       -t --time                time in days [default 91]
+       -m --merged              deletes merged branches [default]
+       -n --no-merged           deletes non-merged branches
+       -e --execute             run the script pushing changes to git
+       -h --help                show this help
+
+
+    Examples:
+       [Dry run] Deletes merged branches older than 3 months
+       ${PROGNAME} <repo-dir>
+
+       [Dry run] Deletes non-merged branches older than 3 months
+       ${PROGNAME} --no-merged <repo-dir>
+
+       [Dry run] Deletes merged branches older than 5 months
+       ${PROGNAME} -t 152 <repo-dir>
+
+       Deletes merged branches older than 3 months
+       ${PROGNAME} <repo-dir> --execute
+
+    Quick time values reference:
+      One year = 365
+      Eight months = 243
+      Five months = 152
+      Three months = 91
+      Two months = 60
+      One month = 30
+EOF
 }
 
-# Establish run order
 main() {
   readonly PROGNAME=$(basename $0)
   readonly ARGS="$@"
@@ -244,7 +243,7 @@ main() {
 
   check_git_installed
   check_valid_git_repo $target_repo_dir
-  git_branches_delete
+  old_git_branches_delete
 }
 
 main "$@"
