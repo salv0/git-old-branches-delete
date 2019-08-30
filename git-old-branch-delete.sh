@@ -73,14 +73,14 @@ git_branches_delete() {
 
   for branch in $branches; do
     # Get the date in format 2016-09-23 14:40:54 +0200
-    branchDate=$(git show -s --format=%ci origin/$branch)
+    branchDate=$(git show -s --format=%ci origin/${branch})
 
     # Extract only the date part (remove time and timezone)
-    branchDate=$(echo $branchDate | cut -d' ' -f 1)
+    branchDate=$(echo ${branchDate} | cut -d' ' -f 1)
 
     currentTimestamp=$(date +%s)
 
-    branchDateTimestamp=$(date -j -f "%Y-%m-%d" "$branchDate" "+%s")
+    branchDateTimestamp=$(date -j -f "%Y-%m-%d" "${branchDate}" "+%s")
 
     days=$((($currentTimestamp - $branchDateTimestamp) / 60 / 60 / 24))
 
@@ -123,16 +123,16 @@ check_git_installed() {
 check_valid_git_repo() {
   local repo_dir=$1
 
-  debug_message "Command: git -C $repo_dir rev-parse --is-inside-work-tree"
+  debug_message "Command: git -C ${repo_dir} rev-parse --is-inside-work-tree"
 
-  if ! [ "$(git -C $repo_dir rev-parse --is-inside-work-tree 2>/dev/null)" == "true" ]; then
+  if ! [ "$(git -C ${repo_dir} rev-parse --is-inside-work-tree 2>/dev/null)" == "true" ]; then
     print_error_and_usage 'The specified path is not a valid git repository.'
   fi
 }
 
 usage() {
   cat <<-EOF
-    usage: $PROGNAME [options] <repo-dir>
+    usage: ${PROGNAME} [options] <repo-dir>
 
     The script deletes merged (default) or non-merged branches older than
     a specified time from the target git repository.
@@ -150,16 +150,16 @@ usage() {
 
     Examples:
        [Dry run] Deletes merged branches older than 3 months
-       $PROGNAME <repo-dir>
+       ${PROGNAME} <repo-dir>
 
        [Dry run] Deletes non-merged branches older than 3 months
-       $PROGNAME --no-merged <repo-dir>
+       ${PROGNAME} --no-merged <repo-dir>
 
        [Dry run] Deletes merged branches older than 5 months
-       $PROGNAME -t 152 <repo-dir>
+       ${PROGNAME} -t 152 <repo-dir>
 
        Deletes merged branches older than 3 months
-       $PROGNAME <repo-dir> --execute
+       ${PROGNAME} <repo-dir> --execute
 
     Quick time values reference:
       One year = 365
@@ -199,7 +199,7 @@ initialize_settings() {
       ;;
     -* | --*)
       local invalid_option=$1
-      print_error_and_usage "invalid option $invalid_option"
+      print_error_and_usage "invalid option ${invalid_option}"
       ;;
     *)
       target_repo_dir=$1
@@ -211,13 +211,13 @@ initialize_settings() {
   check_valid_dir $target_repo_dir
   check_valid_days $days
 
-  debug_message "Setting up the script with dry_run=$dry_run days=$days delete_merged_branches=$delete_merged_branches target_repo_dir=$target_repo_dir"
+  debug_message "Setting up the script with dry_run=${dry_run} days=${days} delete_merged_branches=${delete_merged_branches} target_repo_dir=${target_repo_dir}"
 }
 
 check_valid_dir() {
   local repo_dir=$1
 
-  if [[ ! -d "$repo_dir" ]]; then
+  if [[ ! -d "${repo_dir}" ]]; then
     print_error_and_usage "parameter <repo-dir> invalid or not specified."
   fi
 }
@@ -225,7 +225,7 @@ check_valid_dir() {
 check_valid_days() {
   local days=$1
 
-  if ! [[ "$days" -gt "0" ]] 2>/dev/null; then
+  if ! [[ "${days}" -gt "0" ]] 2>/dev/null; then
     print_error_and_usage "number of days is invalid."
   fi
 }
