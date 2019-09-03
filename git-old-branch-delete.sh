@@ -76,7 +76,7 @@ print_action() {
 }
 
 debug_message() {
-  if ! [[ "$debug" = true ]]; then
+  if ! [[ "$debug" == true ]]; then
     return
   fi
 
@@ -95,20 +95,21 @@ old_git_branches_delete() {
   local delete_merged_branches=$delete_merged_branches
   local execution_days=$execution_days
 
-  print_action "Pruning local cache of remote branches first..."
+  print_action "Pruning local cache of remote branches..."
   git -C ${target_git_repo_dir} fetch --prune origin
 
-  print_action "Retrieving list of branches for deletion..."
+  print_action "Retrieving the list of branches..."
   local branches=
-  if [[ "$delete_merged_branches" = true ]]; then
+  if [[ "$delete_merged_branches" == true ]]; then
     debug_message "Command: git -C ${target_git_repo_dir} branch -r --merged | grep -v master | grep -v developer | sed 's/origin\///'"
     branches=$(git -C ${target_git_repo_dir} branch -r --merged | grep -v master | grep -v developer | sed 's/origin\///')
+    print_action "Deleting merged branches older than ${execution_days} days...\n"
   else
     debug_message "Command: git -C ${target_git_repo_dir} branch -r --no-merged | grep -v master | grep -v developer | sed 's/origin\///'"
     branches=$(git -C ${target_git_repo_dir} branch -r --no-merged | grep -v master | grep -v developer | sed 's/origin\///')
+    print_action "Deleting non merged branches older than ${execution_days} days...\n"
   fi
 
-  print_action "Starting branches deletion.."
   for branch in $branches; do
     # Get the date in format 2016-09-23 14:40:54 +0200
     local branch_date=$(git -C ${target_git_repo_dir} show -s --format=%ci origin/${branch})
@@ -189,6 +190,8 @@ initialize_settings_from_commandline() {
 }
 
 check_git_installed() {
+  debug_message "Checking if git is installed correctly."
+
   if ! [[ -x "$(command -v git)" ]]; then
     print_error_and_usage 'git is not installed.'
   fi
@@ -197,6 +200,7 @@ check_git_installed() {
 check_valid_git_repo() {
   local repo_dir=$1
 
+  debug_message "Checking if ${repo_dir} is a valid git repo"
   debug_message "Command: git -C ${repo_dir} rev-parse --is-inside-work-tree"
 
   if ! [[ "$(git -C ${repo_dir} rev-parse --is-inside-work-tree 2>/dev/null)" == "true" ]]; then
