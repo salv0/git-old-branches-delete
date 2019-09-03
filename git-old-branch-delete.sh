@@ -76,6 +76,10 @@ print_action() {
 }
 
 debug_message() {
+  if ! $debug; then
+    return
+  fi
+
   local message=$1
   print_yel "[DEBUG] ${message}"
 }
@@ -96,7 +100,7 @@ old_git_branches_delete() {
 
   print_action "Retrieving list of branches for deletion..."
   local branches=
-  if [[ delete_merged_branches ]]; then
+  if $delete_merged_branches; then
     debug_message "Command: git -C ${target_git_repo_dir} branch -r --merged | grep -v master | grep -v developer | sed 's/origin\///'"
     branches=$(git -C ${target_git_repo_dir} branch -r --merged | grep -v master | grep -v developer | sed 's/origin\///')
   else
@@ -118,7 +122,7 @@ old_git_branches_delete() {
 
     local days_diff=$((($current_timestamp - $branch_date_timestamp) / 60 / 60 / 24))
 
-    if [[ "$days_diff" -gt $THREE_MONTHS ]]; then
+    if [[ "$days_diff" -gt $execution_days ]]; then
       print_green "Selected branch: $branch"
       echo "    --- Full branch date: $branch_date"
       echo "    --- Y-m-d date: $branch_date"
@@ -140,18 +144,21 @@ old_git_branches_delete() {
 initialize_settings_from_commandline() {
   while [ "$1" != "" ]; do
     case $1 in
+    --debug)
+      debug=true
+      ;;
     -d | --days)
       shift
       execution_days=$1
       ;;
     -m | --merged)
-      delete_merged_branches=1
+      delete_merged_branches=true
       ;;
     -n | --no-merged)
-      delete_merged_branches=0
+      delete_merged_branches=false
       ;;
     -e | --execute)
-      dry_run=0
+      dry_run=false
       ;;
     -h | --help)
       usage
@@ -172,6 +179,7 @@ initialize_settings_from_commandline() {
   check_valid_days $execution_days
 
   # Lock-in script's execution values captured from the command line
+  readonly debug
   readonly dry_run
   readonly target_git_repo_dir
   readonly delete_merged_branches
@@ -260,9 +268,10 @@ main() {
   readonly THREE_MONTHS=91
 
   # Default values
-  local dry_run=1
+  local debug=false
+  local dry_run=true
   local target_git_repo_dir=''
-  local delete_merged_branches=1
+  local delete_merged_branches=true
   local execution_days=$THREE_MONTHS
 
   initialize_colors
