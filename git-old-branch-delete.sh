@@ -166,7 +166,7 @@ initialize_settings_from_commandline() {
       ;;
     -* | --*)
       local invalid_option=$1
-      print_error_and_usage "invalid option ${invalid_option}"
+      print_error_and_usage "Invalid option ${invalid_option}"
       ;;
     *)
       target_git_repo_dir=$1
@@ -208,7 +208,7 @@ check_valid_dir() {
   local repo_dir=$1
 
   if [[ ! -d "${repo_dir}" ]]; then
-    print_error_and_usage "parameter <repo-dir> invalid or not specified."
+    print_error_and_usage "Parameter <repo-dir> invalid or not specified."
   fi
 }
 
@@ -216,7 +216,7 @@ check_valid_days() {
   local days=$1
 
   if ! [[ "${days}" -gt "0" ]] 2>/dev/null; then
-    print_error_and_usage "number of days is invalid."
+    print_error_and_usage "The number of days is invalid."
   fi
 }
 
