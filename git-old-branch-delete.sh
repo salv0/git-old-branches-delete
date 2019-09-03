@@ -101,12 +101,12 @@ old_git_branches_delete() {
   print_action "Retrieving the list of branches..."
   local branches=
   if [[ "$delete_merged_branches" == true ]]; then
-    debug_message "Command: git -C ${target_git_repo_dir} branch -r --merged | grep -v master | grep -v developer | sed 's/origin\///'"
-    branches=$(git -C ${target_git_repo_dir} branch -r --merged | grep -v master | grep -v developer | sed 's/origin\///')
+    debug_message "Command: git -C ${target_git_repo_dir} branch -r --merged | grep -Ev 'master|developer' | sed 's/origin\///'"
+    branches=$(git -C ${target_git_repo_dir} branch -r --merged | grep -Ev 'master|developer' | sed 's/origin\///')
     print_action "Deleting merged branches older than ${execution_days} days...\n"
   else
-    debug_message "Command: git -C ${target_git_repo_dir} branch -r --no-merged | grep -v master | grep -v developer | sed 's/origin\///'"
-    branches=$(git -C ${target_git_repo_dir} branch -r --no-merged | grep -v master | grep -v developer | sed 's/origin\///')
+    debug_message "Command: git -C ${target_git_repo_dir} branch -r --no-merged | grep -Ev 'master|developer' | sed 's/origin\///'"
+    branches=$(git -C ${target_git_repo_dir} branch -r --no-merged | grep -Ev 'master|developer' | sed 's/origin\///')
     print_action "Deleting non merged branches older than ${execution_days} days...\n"
   fi
 
@@ -135,8 +135,7 @@ old_git_branches_delete() {
 
       # Comment the following line if you wanna do a dry run :)
       # git push origin --delete $branch
-      echo ""
-      echo ""
+      echo -e "\n\n"
     fi
   done
   print_action "Deleting old branches finished."
