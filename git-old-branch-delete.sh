@@ -185,7 +185,7 @@ old_git_branches_delete() {
     print_green "Found no branches to delete\n"
   fi
 
-  print_action "Deleting old branches finished."
+  print_action "Finished."
   print_dry_run_footer
 }
 
