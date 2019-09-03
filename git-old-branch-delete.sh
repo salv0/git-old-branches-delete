@@ -76,12 +76,12 @@ print_action() {
 }
 
 debug_message() {
-  if ! $debug; then
+  if ! [[ "$debug" = true ]]; then
     return
   fi
 
   local message=$1
-  print_yel "[DEBUG] ${message}"
+  print_yel "[DEBUG]  ${message}"
 }
 
 #////////////////////////////////////////
@@ -100,7 +100,7 @@ old_git_branches_delete() {
 
   print_action "Retrieving list of branches for deletion..."
   local branches=
-  if $delete_merged_branches; then
+  if [[ "$delete_merged_branches" = true ]]; then
     debug_message "Command: git -C ${target_git_repo_dir} branch -r --merged | grep -v master | grep -v developer | sed 's/origin\///'"
     branches=$(git -C ${target_git_repo_dir} branch -r --merged | grep -v master | grep -v developer | sed 's/origin\///')
   else
