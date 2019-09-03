@@ -24,8 +24,6 @@
 
 # Abort on nonzero exitstatus
 set -o errexit
-# Don't hide errors within pipes
-set -o pipefail
 
 #////////////////////////////////////////
 # COLORS & PRINT FUNCTIONS
@@ -118,9 +116,18 @@ delete_branch() {
   if [[ "$dry_run" == true ]]; then
     print_red "    --- Will delete the branch\n\n"
   else
-    print_red "    --- Deleting branch\n\n"
-    # git push origin --delete $branch
+    print_red "    --- Deleting branch locally and on remote\n\n"
+
+    print_debug_message "Command: git -C ${target_git_repo_dir} branch -D $branch"
+    git -C ${target_git_repo_dir} branch -D $branch
+
+    print_debug_message "Command: git -C ${target_git_repo_dir} push --delete origin $branch"
+    git -C ${target_git_repo_dir} push --delete origin $branch
   fi
+}
+
+checkout_master_branch() {
+  git -C ${target_git_repo_dir} checkout master
 }
 
 prune_local_git_cache() {
@@ -150,24 +157,33 @@ old_git_branches_delete() {
     print_action "Deleting non merged branches older than ${execution_days} days...\n"
   fi
 
-  for branch in $branches; do
-    # Get the date in format 2016-09-23 14:40:54 +0200
-    local branch_date=$(git -C ${target_git_repo_dir} show -s --format=%ci origin/${branch})
+  if [[ ! -z "$branches" ]]; then
+    # Checkout master branch to avoid possible "Cannot delete branch 'xxx' checked out at yyyy"
+    checkout_master_branch
 
-    # Extract only the date part (remove time and timezone)
-    branch_date=$(echo ${branch_date} | cut -d' ' -f 1)
+    for branch in $branches; do
+      # Get the date in format 2016-09-23 14:40:54 +0200
+      local branch_date=$(git -C ${target_git_repo_dir} show -s --format=%ci origin/${branch})
 
-    local current_timestamp=$(date +%s)
+      # Extract only the date part (remove time and timezone)
+      branch_date=$(echo ${branch_date} | cut -d' ' -f 1)
 
-    local branch_date_timestamp=$(date -j -f "%Y-%m-%d" "${branch_date}" "+%s")
+      local current_timestamp=$(date +%s)
 
-    local days_diff=$((($current_timestamp - $branch_date_timestamp) / 60 / 60 / 24))
+      local branch_date_timestamp=$(date -j -f "%Y-%m-%d" "${branch_date}" "+%s")
 
-    if [[ "$days_diff" -gt $execution_days ]]; then
-      print_branch_stats "$branch" "$branch_date" "$current_timestamp" "$branch_date_timestamp" "$days_diff"
-      delete_branch "$branch"
-    fi
-  done
+      local days_diff=$((($current_timestamp - $branch_date_timestamp) / 60 / 60 / 24))
+
+      if [[ "$days_diff" -gt $execution_days ]]; then
+        print_branch_stats "$branch" "$branch_date" "$current_timestamp" "$branch_date_timestamp" "$days_diff"
+        delete_branch "$branch"
+      fi
+    done
+
+    prune_local_git_cache
+  else
+    print_green "Found no branches to delete\n"
+  fi
 
   print_action "Deleting old branches finished."
   print_dry_run_footer
