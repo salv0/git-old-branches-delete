@@ -274,11 +274,12 @@ usage() {
   cat <<-EOF
     usage: ${PROGNAME} [options] <repo-dir>
 
-    The script deletes merged (default) or non-merged branches older than
+    The script deletes merged or non-merged branches older than
     a specified time (in days) from the target git repository.
 
-    The script will run automatically in dry-run mode.
-    For a real execution specify --execute.
+    - The master branch is always excluded automatically.
+    - The script will run as default in dry-run mode.
+    - To perform a real execution specify --execute
 
     OPTIONS:
        -d,--days                days [defaults to 91]
