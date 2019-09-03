@@ -35,7 +35,6 @@ initialize_colors() {
   readonly grn=$'\e[1;32m'
   readonly yel=$'\e[1;33m'
   readonly blu=$'\e[1;34m'
-  readonly mag=$'\e[1;35m'
   readonly cyn=$'\e[1;36m'
   readonly end=$'\e[0m'
 }
@@ -56,10 +55,6 @@ print_blue() {
   echo -e "${blu}$1${end}"
 }
 
-print_mag() {
-  echo -e "${mag}$1${end}"
-}
-
 print_cyn() {
   echo -e "${cyn}$1${end}"
 }
@@ -75,7 +70,24 @@ print_action() {
   print_blue "[ACTION] ${message}"
 }
 
-debug_message() {
+print_branch_stats() {
+  local branch="$1"
+  local branch_date="$2"
+  local current_timestamp="$3"
+  local branch_date_timestamp="$4"
+  local days_diff="$5"
+
+  print_green "Selected branch: ${branch}"
+  if [[ "$debug" == true ]]; then
+    echo "    --- Full branch date: ${branch_date}"
+    echo "    --- Y-m-d date: ${branch_date}"
+    echo "    --- Current timestamp: ${current_timestamp}"
+    echo "    --- Branch date timestamp: ${branch_date_timestamp}"
+  fi
+  echo "    --- Last commit on branch was ${cyn}$days_diff${end} days ago"
+}
+
+print_debug_message() {
   if ! [[ "$debug" == true ]]; then
     return
   fi
@@ -84,9 +96,37 @@ debug_message() {
   print_yel "[DEBUG]  ${message}"
 }
 
+print_dry_run_header() {
+  if [[ "$dry_run" == true ]]; then
+    print_blue "================= DRY RUN STARTED ================="
+  fi
+}
+
+print_dry_run_footer() {
+  if [[ "$dry_run" == true ]]; then
+    print_blue "================= DRY RUN FINISHED ================="
+  fi
+}
+
 #////////////////////////////////////////
 # SCRIPT FUNCTIONS
 #////////////////////////////////////////
+
+delete_branch() {
+  local branch=$1
+
+  if [[ "$dry_run" == true ]]; then
+    print_red "    --- Will delete the branch\n\n"
+  else
+    print_red "    --- Deleting branch\n\n"
+    # git push origin --delete $branch
+  fi
+}
+
+prune_local_git_cache() {
+  print_action "Pruning local cache of remote branches..."
+  git -C ${target_git_repo_dir} fetch --prune origin
+}
 
 old_git_branches_delete() {
   # Capture global variables
@@ -95,17 +135,17 @@ old_git_branches_delete() {
   local delete_merged_branches=$delete_merged_branches
   local execution_days=$execution_days
 
-  print_action "Pruning local cache of remote branches..."
-  git -C ${target_git_repo_dir} fetch --prune origin
+  print_dry_run_header
+  prune_local_git_cache
 
   print_action "Retrieving the list of branches..."
   local branches=
   if [[ "$delete_merged_branches" == true ]]; then
-    debug_message "Command: git -C ${target_git_repo_dir} branch -r --merged | grep -Ev 'master|developer' | sed 's/origin\///'"
+    print_debug_message "Command: git -C ${target_git_repo_dir} branch -r --merged | grep -Ev 'master|developer' | sed 's/origin\///'"
     branches=$(git -C ${target_git_repo_dir} branch -r --merged | grep -Ev 'master|developer' | sed 's/origin\///')
     print_action "Deleting merged branches older than ${execution_days} days...\n"
   else
-    debug_message "Command: git -C ${target_git_repo_dir} branch -r --no-merged | grep -Ev 'master|developer' | sed 's/origin\///'"
+    print_debug_message "Command: git -C ${target_git_repo_dir} branch -r --no-merged | grep -Ev 'master|developer' | sed 's/origin\///'"
     branches=$(git -C ${target_git_repo_dir} branch -r --no-merged | grep -Ev 'master|developer' | sed 's/origin\///')
     print_action "Deleting non merged branches older than ${execution_days} days...\n"
   fi
@@ -124,21 +164,13 @@ old_git_branches_delete() {
     local days_diff=$((($current_timestamp - $branch_date_timestamp) / 60 / 60 / 24))
 
     if [[ "$days_diff" -gt $execution_days ]]; then
-      print_green "Selected branch: $branch"
-      echo "    --- Full branch date: $branch_date"
-      echo "    --- Y-m-d date: $branch_date"
-      echo "    --- Current timestamp: $current_timestamp"
-      echo "    --- Branch date timestamp: $branch_date_timestamp"
-      echo "    --- Last commit on $branch branch was ${cyn}$days_diff${end} days ago"
-
-      print_red "    --- Deleting the old branch $branch"
-
-      # Comment the following line if you wanna do a dry run :)
-      # git push origin --delete $branch
-      echo -e "\n\n"
+      print_branch_stats "$branch" "$branch_date" "$current_timestamp" "$branch_date_timestamp" "$days_diff"
+      delete_branch "$branch"
     fi
   done
+
   print_action "Deleting old branches finished."
+  print_dry_run_footer
 }
 
 initialize_settings_from_commandline() {
@@ -149,7 +181,8 @@ initialize_settings_from_commandline() {
       ;;
     -d | --days)
       shift
-      execution_days=$1
+      execution_days="$1"
+      check_valid_days $execution_days
       ;;
     -m | --merged)
       delete_merged_branches=true
@@ -165,18 +198,16 @@ initialize_settings_from_commandline() {
       exit
       ;;
     -* | --*)
-      local invalid_option=$1
+      local invalid_option="$1"
       print_error_and_usage "Invalid option ${invalid_option}"
       ;;
     *)
-      target_git_repo_dir=$1
+      target_git_repo_dir="$1"
+      check_valid_dir $target_git_repo_dir
       ;;
     esac
     shift
   done
-
-  check_valid_dir $target_git_repo_dir
-  check_valid_days $execution_days
 
   # Lock-in script's execution values captured from the command line
   readonly debug
@@ -185,11 +216,11 @@ initialize_settings_from_commandline() {
   readonly delete_merged_branches
   readonly execution_days
 
-  debug_message "Setting up the script with dry_run=${dry_run} days=${execution_days} delete_merged_branches=${delete_merged_branches} target_repo_dir=${target_git_repo_dir}"
+  print_debug_message "Setting up the script with dry_run=${dry_run} days=${execution_days} delete_merged_branches=${delete_merged_branches} target_repo_dir=${target_git_repo_dir}"
 }
 
 check_git_installed() {
-  debug_message "Checking if git is installed correctly."
+  print_debug_message "Checking if git is installed correctly."
 
   if ! [[ -x "$(command -v git)" ]]; then
     print_error_and_usage 'git is not installed.'
@@ -199,8 +230,8 @@ check_git_installed() {
 check_valid_git_repo() {
   local repo_dir=$1
 
-  debug_message "Checking if ${repo_dir} is a valid git repo"
-  debug_message "Command: git -C ${repo_dir} rev-parse --is-inside-work-tree"
+  print_debug_message "Checking if ${repo_dir} is a valid git repo"
+  print_debug_message "Command: git -C ${repo_dir} rev-parse --is-inside-work-tree"
 
   if ! [[ "$(git -C ${repo_dir} rev-parse --is-inside-work-tree 2>/dev/null)" == "true" ]]; then
     print_error_and_usage 'The specified path is not a valid git repository.'
