@@ -281,11 +281,12 @@ usage() {
     For a real execution specify --execute.
 
     OPTIONS:
-       -d --days                days [default 91]
-       -m --merged              deletes merged branches [default]
-       -n --no-merged           deletes non-merged branches
-       -e --execute             run the script pushing changes to git
-       -h --help                show this help
+       -d,--days                days [defaults to 91]
+       -m, --merged             deletes merged branches [default]
+       -n, --no-merged          deletes non-merged branches
+       -e, --execute            run the script pushing changes to git
+       -h, --help               show this help
+       --debug                  show debug messages
 
 
     Examples:
@@ -296,12 +297,12 @@ usage() {
        ${PROGNAME} --no-merged <repo-dir>
 
        [Dry run] Deletes merged branches older than 5 months
-       ${PROGNAME} -t 152 <repo-dir>
+       ${PROGNAME} -d 152 <repo-dir>
 
        Deletes merged branches older than 3 months
        ${PROGNAME} <repo-dir> --execute
 
-    Quick time values reference:
+    Quick time values references:
       One year = 365
       Eight months = 243
       Five months = 152
