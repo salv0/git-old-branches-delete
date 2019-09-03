@@ -148,12 +148,12 @@ old_git_branches_delete() {
   print_action "Retrieving the list of branches..."
   local branches=
   if [[ "$delete_merged_branches" == true ]]; then
-    print_debug_message "Command: git -C ${target_git_repo_dir} branch -r --merged | grep -Ev 'master|developer' | sed 's/origin\///'"
-    branches=$(git -C ${target_git_repo_dir} branch -r --merged | grep -Ev 'master|developer' | sed 's/origin\///')
+    print_debug_message "Command: git -C ${target_git_repo_dir} branch -r --merged | grep -Ev 'master' | sed 's/origin\///'"
+    branches=$(git -C ${target_git_repo_dir} branch -r --merged | grep -Ev 'master' | sed 's/origin\///')
     print_action "Deleting merged branches older than ${execution_days} days...\n"
   else
-    print_debug_message "Command: git -C ${target_git_repo_dir} branch -r --no-merged | grep -Ev 'master|developer' | sed 's/origin\///'"
-    branches=$(git -C ${target_git_repo_dir} branch -r --no-merged | grep -Ev 'master|developer' | sed 's/origin\///')
+    print_debug_message "Command: git -C ${target_git_repo_dir} branch -r --no-merged | grep -Ev 'master' | sed 's/origin\///'"
+    branches=$(git -C ${target_git_repo_dir} branch -r --no-merged | grep -Ev 'master' | sed 's/origin\///')
     print_action "Deleting non merged branches older than ${execution_days} days...\n"
   fi
 
@@ -236,7 +236,7 @@ initialize_settings_from_commandline() {
 }
 
 check_git_installed() {
-  print_debug_message "Checking if git is installed correctly."
+  print_debug_message "Checking if git is installed correctly"
 
   if ! [[ -x "$(command -v git)" ]]; then
     print_error_and_usage 'git is not installed.'
