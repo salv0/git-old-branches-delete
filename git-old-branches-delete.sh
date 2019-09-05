@@ -282,9 +282,9 @@ usage() {
     - To perform a real execution specify --execute
 
     OPTIONS:
-       -d,--days                days [defaults to 91]
-       -m, --merged             deletes merged branches [default]
-       -n, --no-merged          deletes non-merged branches
+       -d, --days               days [defaults to 91]
+       -m, --merged             delete merged branches [default]
+       -n, --no-merged          delete non-merged branches
        -e, --execute            run the script pushing changes to git
        -h, --help               show this help
        --debug                  show debug messages
