@@ -51,7 +51,7 @@ Perform a **_dry-run_** deleting merged branches older than 5 months:
 git-old-branches-delete.sh --merged --days 152 /my/repository
 ```
 
-(Note that `--merge` can be left out as it is the default value)
+(Note that `--merged` can be left out as it is the default value)
 <br>
 <br>
 
@@ -61,7 +61,7 @@ Perform a **_dry-run_** deleting merged branches older than 5 months and showing
 git-old-branches-delete.sh --debug --merged --days 152 /my/repository
 ```
 
-(Note that `--merge` can be left out as it is the default value)
+(Note that `--merged` can be left out as it is the default value)
 <br>
 <br>
 
