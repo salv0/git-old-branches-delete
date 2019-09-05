@@ -90,4 +90,4 @@ Delete branches older than:
 ## Feedback
 
 Suggestions and improvements
-[welcome](https://github.com/salv0/dotfiles/issues)!
+[welcome](https://github.com/salv0/git-old-branches-delete/issues)!
